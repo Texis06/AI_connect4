@@ -10,12 +10,17 @@ TODO:
 -colocar as funções feitas no topo;
 -pop;
 -seleção jogadas;
+-alterar board para ser global;
 */
 
 
 
 #define MAX_Y 6
 #define MAX_X 7
+
+bool true_board[MAX_X][MAX_Y];
+
+
 
 void initiate_board(char board[MAX_X][MAX_Y]);
 void print_board(char board[MAX_X][MAX_Y]);
@@ -37,6 +42,16 @@ void initiate_board(char board[MAX_X][MAX_Y])
         for(int x=0;x<MAX_X;x++) {board[x][y] = '_'; }
     }
 }
+
+
+void reset_true_board()
+{
+    for(int y=0;y<MAX_Y;y++)
+    {
+        for(int x=0;x<MAX_X;x++) {true_board[x][y] = false; }
+    }
+}
+
 
 
 //prints the board
@@ -106,40 +121,47 @@ void insert(char board[MAX_X][MAX_Y], char player, int pos)
     while(board[pos][y] == '_' && y<6) {y++; }
     if(y!=0) {board[pos][y-1] = player; }
     else {board[pos][y] = player; }
-    /*
     if(insert_win_con(board, player, pos, y))
     {
         printf("\nvitória\n");
-    }*/
+    }
 }
 
 
 //win condition
 bool insert_win_con(char board[MAX_X][MAX_Y], char player, int posx, int posy)
 {
-    if(horizontal_win_con(posx, posy, board, player)>=4 || vertical_win_con(posx, posy, board, player)>=4 || diagonal_win_con(posx, posy, board, player, -1)>=4 || diagonal_win_con(posx, posy, board, player, 1)>=4)
-    {return true; }
-    else {return false; }
+    if(horizontal_win_con(posx, posy, board, player) >= 4) {printf("horiz"); return true; }
+    reset_true_board();
+    if(vertical_win_con(posx, posy, board, player) >= 4) {printf("vert"); return true; }
+    reset_true_board();
+    if(diagonal_win_con(posx, posy, board, player, -1) >= 4) {printf("diag1"); return true; }
+    reset_true_board();
+    if(diagonal_win_con(posx, posy, board, player, 1) >= 4) {printf("diag-1"); return true; }
+    reset_true_board();
+    return false;
 }
-
+//bug na wincon: só determina vitória quando é colocado algo no de cima
 int horizontal_win_con(int x, int y, char board[MAX_X][MAX_Y], char player)
 {
-    printf("%d %d\n", x, y);
-    if(x>=MAX_X || x<=-1) {return 0; }
+    if(x>=MAX_X || x<=-1 || true_board[x][y] == true) {return 0; }
+    true_board[x][y] = true;
     if(board[x][y]!=player) {return 0; }
     return 1 + horizontal_win_con(x-1, y, board, player) + horizontal_win_con(x+1, y, board, player);
 }
 
 int vertical_win_con(int x, int y, char board[MAX_X][MAX_Y], char player)
 {
-    if(y>=MAX_Y || y<=-1) {return 0; }
+    if(y>=MAX_Y || y<=-1 || true_board[x][y] == true) {return 0; }
+    true_board[x][y] = true;
     if(board[x][y]!=player) {return 0; }
     return 1 + vertical_win_con(x, y-1, board, player) + vertical_win_con(x, y+1, board, player);
 }
 
 int diagonal_win_con(int x, int y, char board[MAX_X][MAX_Y], char player, int dir)
 {
-    if(y>=MAX_Y || y<=-1 || x>=MAX_X || x<=-1 ) {return 0; }
+    if(y>=MAX_Y || y<=-1 || x>=MAX_X || x<=-1 || true_board[x][y] == true) {return 0; }
+    true_board[x][y] = true;
     if(board[x][y]!=player) {return 0; }
     return 1 + diagonal_win_con(x+1, y-dir, board, player, dir) + diagonal_win_con(x-1, y+dir, board, player, dir);
 }
@@ -159,16 +181,16 @@ int main()
     char game[MAX_X][MAX_Y];
     initiate_board(game);
     print_board(game);
+    reset_true_board();
     int player;
     while(true)
     {
         player = player_input_insert(game);
         insert(game,'#',player);
         print_board(game);
-        printf("%d", horizontal_win_con(0,MAX_Y-1,game,'#'));
-        printf("%d", vertical_win_con(0,MAX_Y-1,game,'#'));
-        printf("%d", diagonal_win_con(0,MAX_Y-1,game,'#',1));
-        printf("%d\n", diagonal_win_con(0,MAX_Y-1,game,'#',-1));
+        player = player_input_insert(game);
+        insert(game,'*',player);
+        print_board(game);
     }
 
 
