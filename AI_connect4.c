@@ -6,10 +6,10 @@
 TODO:
 -diferentes empates(campo cheio = POSSIBILIDADE de empate // se o gamestate for repetido 3 vezes então há POSSIBILIDADE de empate);
 -win condition de insert; X
--win condition de pop(jogador que faz o pop tem a prioridade na vitória);
+-win condition de pop(jogador que faz o pop tem a prioridade na vitória); X
 -colocar as funções feitas no topo;
 -pop; X
--seleção jogadas;
+-seleção jogadas; X
 -alterar board para ser global; X
 */
 
@@ -22,12 +22,11 @@ bool true_board[MAX_X][MAX_Y];
 char board[MAX_X][MAX_Y];
 bool victory=false;
 bool board_filled=false;
-
+int state_count=0;
 
 
 void initiate_board();
 void print_board();
-int player_input_insert();
 bool check_insert(int pos);
 void insert(char player, int pos);
 bool insert_win_con(char player, int posx, int posy);
@@ -83,23 +82,6 @@ void print_board()
 }
 
 
-/*
-//allows player to choose which coordinate to play
-int player_input_insert()
-{
-    int input;
-    while(true)
-    {
-        scanf("%d",&input);
-        if(input<-1 || input>7) {printf("the number must be between 1-7\n"); }
-        else if(!check_insert(input-1)) {printf("chose somewhere thats not occupied\n"); }
-        else {break; }
-    }
-    return input-1;
-}
-*/
-
-
 //checks if its possible to insert, basicamente se o topo está todo cheio
 bool check_top_insert(int i)
 {
@@ -152,13 +134,6 @@ void option_selector(char player)
         }
     }
 }
-/*    while(true)
-    {
-        scanf("%d",&input);
-        if(input<-1 || input>7) {printf("the number must be between 1-7\n"); }
-        else if(!check_insert(input-1)) {printf("chose somewhere thats not occupied\n"); }
-        else {break; }
-    }*/
 
 
 //check if you can insert in pos
@@ -269,11 +244,9 @@ int main()
     print_ruleset();
     print_board();
     reset_true_board();
-    //int pos;
     char player='#';
     while(!victory)
     {
-        //pos = player_input_insert();
         option_selector(player);
         print_board();
         if(player == '#') {player = '*'; }
