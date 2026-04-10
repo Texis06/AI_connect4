@@ -96,7 +96,7 @@ void print_ruleset()
     printf("\nrules for PopOut:\n");
     printf("-if you wish the choose a different position after selecting, choose 0 for the option;\n");
     printf("-if there is only one option available choose any number besides 0 to confirm the play\n");
-    printf("-if the board is completely filled with pieces, you will have an option to tie the game;\n");
+    printf("-if the board is completely filled with pieces, you will have the option to tie the game;\n");
     printf("\n==========================================================================================\n\n");
 }
 
@@ -106,19 +106,35 @@ void option_selector(char player)
     int pos=0, option=0;
     while(pos==0)
     {
+        if(board_filled)
+        {
+            printf("the board is currently filled, you can tie the game(1) or continue(2)");
+            scanf("%d", &option);
+            if(option==1)
+            {
+                victory=true;
+                printf("\n================");
+                printf(" the game ended with a tie ");
+                printf("================\n");
+                break;
+            }
+        }
         printf("player %c, choose which position(1-7) you want to target:", player);
         while(true)
         {
             scanf("%d", &pos);
-            if(pos<7 && pos>0) {break; }
-            else {printf("\nThe position must be between 1-7"); }
+            if(pos<8 && pos>0) {break; }
+            else {printf("\nthe position must be between 1-7"); }
         }
         if(check_insert(pos-1) && !check_pop(pos-1))
         {
-            printf("choose if you want to insert(1) or pop(2):");
-            scanf("%d", &option);
-            if(option==1) {insert(player,pos); }
-            else if(option==2) {pop(pos, player); }
+            while(true)
+            {
+                printf("choose if you want to insert(1) or pop(2):");
+                scanf("%d", &option);
+                if(option==1) {insert(player,pos); break; }
+                else if(option==2) {pop(pos, player); break; }
+            }
         }
         else if(check_insert(pos-1))
         {
@@ -140,6 +156,18 @@ void option_selector(char player)
 bool check_insert(int pos) {return board[pos][0]=='_'; }
 //check if you can pop in pos
 bool check_pop(int pos) {return board[pos][MAX_Y-1]=='_'; }
+//checks if the board is full
+bool check_board()
+{
+    int i=0;
+    while(i<MAX_X)
+    {
+        if(board[i][0]=='_') {return false; }
+        i++;
+    }
+    board_filled=true;
+    return true;
+}
 
 
 //allows players to insert their respective piece in the board
@@ -156,18 +184,11 @@ void insert(char player, int pos)
         printf("================\n");
         victory = true;
     }
+    if(!check_insert(pos) && check_board()) {; }
 }
 
 char pop_win_con(int posx, int posy, char player)
 {
-    if(horizontal_win_con(posx, posy, player) >= 4) {return player; }
-    reset_true_board();
-    if(diagonal_win_con(posx, posy, player, -1) >= 4) {return player; }
-    reset_true_board();
-    if(diagonal_win_con(posx, posy, player, 1) >= 4) {return player; }
-    reset_true_board();
-    if(player=='#') {player='*'; }
-    else {player='#'; }
     if(horizontal_win_con(posx, posy, player) >= 4) {return player; }
     reset_true_board();
     if(diagonal_win_con(posx, posy, player, -1) >= 4) {return player; }
@@ -216,7 +237,7 @@ int diagonal_win_con(int x, int y, char player, int dir)
 }
 
 //pop
-void pop(int pos,char player)
+void pop(int pos, char player)
 {
     board[pos-1][MAX_Y-1] = '_';
     int i = MAX_Y-1;
@@ -224,16 +245,39 @@ void pop(int pos,char player)
     {
         if(i-1 < 0 || board[MAX_X][i-1] == '_') {break; }
         board[pos-1][i] = board[pos-1][i-1];
-        if(!victory && pop_win_con(pos-1, i, player) != '_')
-        {
-            printf("\n================");
-            printf("\nplayer %c victory\n", pop_win_con(pos-1, i, player));
-            printf("================\n");
-            victory = true;
-        }
         i--;
     }
     board[pos-1][i] = '_';
+    i = MAX_Y-1;
+    while(true)
+    {
+        if(i-1 < 0 || board[MAX_X][i-1] == '_') {break; }
+        if(!victory && pop_win_con(pos-1, i, player) != '_')
+        {
+            printf("\n================");
+            printf("\nplayer %c victory\n", player);
+            printf("================\n");
+            victory = true;
+            break;
+        }
+        i--;
+    }
+    if(player=='#') {player='*'; }
+    else {player='#'; }
+    i = MAX_Y-1;
+    while(!victory)
+    {
+        if(i-1 < 0 || board[MAX_X][i-1] == '_') {break; }
+        if(!victory && pop_win_con(pos-1, i, player) != '_')
+        {
+            printf("\n================");
+            printf("\nplayer %c victory\n", player);
+            printf("================\n");
+            victory = true;
+            break;
+        }
+        i--;
+    }
 }
 
 
