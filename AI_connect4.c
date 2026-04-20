@@ -37,7 +37,7 @@ int vertical_win_con(int x, int y, char player);
 int diagonal_win_con(int x, int y, char player, int dir);
 void reset_true_board();
 bool check_top_insert(int i);
-bool check_pop(int pos);
+bool check_pop(int pos, char player);
 void pop(int pos, char player);
 void print_ruleset();
 void option_selector(char player);
@@ -145,9 +145,9 @@ void option_selector(char player)
         {
             scanf("%d", &pos);
             if(pos<8 && pos>0) {break; }
-            else {printf("\nthe position must be between 1-7"); }
+            else {printf("\nthe position must be between 1-7:"); }
         }
-        if(check_insert(pos-1) && !check_pop(pos-1))
+        if(check_insert(pos-1) && check_pop(pos-1, player))
         {
             while(true)
             {
@@ -176,7 +176,7 @@ void option_selector(char player)
 //check if you can insert in pos
 bool check_insert(int pos) {return board[pos][0]=='_'; }
 //check if you can pop in pos
-bool check_pop(int pos) {return board[pos][MAX_Y-1]=='_'; }
+bool check_pop(int pos, char player) {return board[pos][MAX_Y-1]==player; }
 //checks if the board is full
 bool check_board()
 {
