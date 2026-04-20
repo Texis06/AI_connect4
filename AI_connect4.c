@@ -23,6 +23,7 @@ char board[MAX_X][MAX_Y];
 bool victory=false;
 bool board_filled=false;
 int state_count=0;
+char previous_board[2][MAX_X][MAX_Y];
 
 
 void initiate_board();
@@ -30,6 +31,7 @@ void print_board();
 bool check_insert(int pos);
 void insert(char player, int pos);
 bool insert_win_con(char player, int posx, int posy);
+char pop_win_con(int posx, int posy, char player);
 int horizontal_win_con(int x, int y, char player);
 int vertical_win_con(int x, int y, char player);
 int diagonal_win_con(int x, int y, char player, int dir);
@@ -39,7 +41,6 @@ bool check_pop(int pos);
 void pop(int pos, char player);
 void print_ruleset();
 void option_selector(char player);
-char pop_win_con(int posx, int posy, char player);
 
 
 
@@ -97,15 +98,35 @@ void print_ruleset()
     printf("-if you wish the choose a different position after selecting, choose 0 for the option;\n");
     printf("-if there is only one option available choose any number besides 0 to confirm the play\n");
     printf("-if the board is completely filled with pieces, you will have the option to tie the game;\n");
-    printf("\n==========================================================================================\n\n");
+    printf("-if the same position is used for the same\n"); //escrever ts (this shit)
+    printf("==========================================================================================\n\n");
+}
+
+void board_state_store()
+{
+    previous_board[1]=board;
 }
 
 //selects the option you want to choose
 void option_selector(char player)
 {
+    board_state_store();
     int pos=0, option=0;
     while(pos==0)
     {
+        if(state_count>=3)
+        {
+            printf("the same moves have been repeated 3 or more times, either player can tie(1) or continue(2)");
+            scanf("%d", &option);
+            if(option==1)
+            {
+                victory=true;
+                printf("\n================");
+                printf(" the game ended with a tie ");
+                printf("================\n");
+                break;
+            }
+        }
         if(board_filled)
         {
             printf("the board is currently filled, you can tie the game(1) or continue(2)");
@@ -132,7 +153,7 @@ void option_selector(char player)
             {
                 printf("choose if you want to insert(1) or pop(2):");
                 scanf("%d", &option);
-                if(option==1) {insert(player,pos); break; }
+                if(option==1) {insert(player, pos); break; }
                 else if(option==2) {pop(pos, player); break; }
             }
         }
@@ -179,9 +200,9 @@ void insert(char player, int pos)
     else {board[pos-1][y] = player; }
     if(insert_win_con(player, pos-1, y-1))
     {
-        printf("\n================");
+        printf("\n=================");
         printf("\nplayer %c victory\n", player);
-        printf("================\n");
+        printf("=================\n");
         victory = true;
     }
     if(!check_insert(pos) && check_board()) {; }
@@ -254,15 +275,15 @@ void pop(int pos, char player)
         if(i-1 < 0 || board[MAX_X][i-1] == '_') {break; }
         if(!victory && pop_win_con(pos-1, i, player) != '_')
         {
-            printf("\n================");
+            printf("\n=================");
             printf("\nplayer %c victory\n", player);
-            printf("================\n");
+            printf("=================\n");
             victory = true;
             break;
         }
         i--;
     }
-    if(player=='#') {player='*'; }
+    if(player=='#') {player='O'; }
     else {player='#'; }
     i = MAX_Y-1;
     while(!victory)
@@ -270,9 +291,9 @@ void pop(int pos, char player)
         if(i-1 < 0 || board[MAX_X][i-1] == '_') {break; }
         if(!victory && pop_win_con(pos-1, i, player) != '_')
         {
-            printf("\n================");
+            printf("\n=================");
             printf("\nplayer %c victory\n", player);
-            printf("================\n");
+            printf("=================\n");
             victory = true;
             break;
         }
@@ -293,7 +314,7 @@ int main()
     {
         option_selector(player);
         print_board();
-        if(player == '#') {player = '*'; }
+        if(player == '#') {player = 'O'; }
         else {player = '#'; }
     }
 
