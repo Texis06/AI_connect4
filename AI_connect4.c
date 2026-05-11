@@ -102,15 +102,10 @@ void print_ruleset()
     printf("==========================================================================================\n\n");
 }
 
-void board_state_store()
-{
-    previous_board[1]=board;
-}
-
 //selects the option you want to choose
 void option_selector(char player)
 {
-    board_state_store();
+    //board_state_store();
     int pos=0, option=0;
     while(pos==0)
     {
