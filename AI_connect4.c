@@ -42,6 +42,55 @@ void pop(int pos, char player);
 void print_ruleset();
 void option_selector(char player);
 
+typedef struct
+{
+    uint64_t lo;
+    uint32_t hi;
+} Key84;
+
+
+
+Key84 hash_parser()
+{
+    Key84 x84 = 0;
+    for(int i=0;i<MAX_X*MAX_Y;i++)
+    {
+        x84 <<= 0;
+        switch(*(board + i * sizeof(char)))
+        {
+            case '@':
+            x84 |= 1;
+            break;
+
+            case '#':
+            x84 |= 2;
+            break;
+
+            case '_':
+            break;
+        }
+    }
+    return x84;
+}
+
+
+
+uint64_t hash84(Key84 k)
+{
+    uint64_t x = k.lo;
+
+    x ^= ((uint64_t)k.hi << 32);
+
+    // splitmix64 finalizer
+    x ^= x >> 30;
+    x *= 0xbf58476d1ce4e5b9ULL;
+    x ^= x >> 27;
+    x *= 0x94d049bb133111ebULL;
+    x ^= x >> 31;
+
+    return x;
+}
+
 
 
 //creates/resets the board state
@@ -295,7 +344,6 @@ void pop(int pos, char player)
         i--;
     }
 }
-
 
 
 int main()
