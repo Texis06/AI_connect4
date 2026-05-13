@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-
+#include <stdint.h>
 /*
 TODO:
 -diferentes empates(campo cheio = POSSIBILIDADE de empate // se o gamestate for repetido 3 vezes então há POSSIBILIDADE de empate);
@@ -23,8 +23,15 @@ char board[MAX_X][MAX_Y];
 char prev_board[MAX_X][MAX_Y];
 bool victory=false;
 bool board_filled=false;
-int state_count=0;
+bool state_repeated=false;
+uint64_t bucket[PRIME];
+unsigned short int bucket_count[PRIME];
 
+typedef struct Key84
+{
+    uint64_t lo;
+    uint32_t hi;
+} Key84;
 
 void initiate_board();
 void print_board();
@@ -41,34 +48,45 @@ bool check_pop(int pos, char player);
 void pop(int pos, char player);
 void print_ruleset();
 void option_selector(char player);
+void player_switch(char *player);
+Key84 hash_parser();
+uint64_t hash84(Key84 k);
+void prev_board_state();
+void bucket_sender();
 
-typedef struct
-{
-    uint64_t lo;
-    uint32_t hi;
-} Key84;
 
 
 
 Key84 hash_parser()
 {
-    Key84 x84 = 0;
+    Key84 x84 = {0,0};
+    char *ptr = &board[0][0];
+    
     for(int i=0;i<MAX_X*MAX_Y;i++)
     {
-        x84 <<= 0;
-        switch(*(board + i * sizeof(char)))
+        uint8_t v=0;
+    
+        switch(*(ptr + i))
         {
             case '@':
-            x84 |= 1;
+            v |= 1;
             break;
 
             case '#':
-            x84 |= 2;
+            v |= 2;
             break;
 
             case '_':
             break;
         }
+        uint32_t carry = (x84.lo >> 62) & 0x3;
+        // shift both halves
+        x84.lo <<= 2;
+        x84.hi <<= 2;
+        // move overflow bits into hi
+        x84.hi |= carry;
+        // insert new symbol
+        x84.lo |= v;
     }
     return x84;
 }
@@ -93,6 +111,19 @@ uint64_t hash84(Key84 k)
 
 
 
+void bucket_sender()
+{
+    Key84 x86 = hash_parser();
+    uint64_t hashed = hash84(x86);
+    bucket [hashed % PRIME] = hashed;
+    if(bucket_count[hashed % PRIME] == 0) {bucket_count[hashed % PRIME]=1; }
+    else if(bucket_count[hashed % PRIME] >= 2) {state_repeated=true; }
+    else {bucket_count[hashed % PRIME]++; }
+    printf("\n%hu\n", bucket_count[hashed % PRIME]);
+}
+
+
+
 void prev_board_state()
 {
     for(int x=0;x<MAX_X;x++)
@@ -113,6 +144,13 @@ void initiate_board()
 }
 
 
+
+
+void player_switch(char *player)
+{
+    if(*player == '#') {*player='@'; }
+    else {*player='#'; }
+}
 
 
 void reset_true_board()
@@ -167,13 +205,22 @@ void print_ruleset()
 void option_selector(char player)
 {
     prev_board_state();
+    bucket_sender();
     int pos=0, option=0;
     while(pos==0)
     {
-        if(state_count>=3)
+        if(state_repeated)
         {
-            printf("the same moves have been repeated 3 or more times, either player can tie(1) or continue(2)");
+            printf("the same moves have been repeated 3 or more times, either player can tie(1) or continue(2)\n");
+            printf("player %c:", player);
             scanf("%d", &option);
+            if(option!=1)
+            {
+                player_switch(&player);
+                printf("\nplayer %c:", player);
+                player_switch(&player);
+                scanf("%d", &option);
+            }
             if(option==1)
             {
                 victory=true;
@@ -182,10 +229,11 @@ void option_selector(char player)
                 printf("================\n");
                 break;
             }
+            state_repeated=false;
         }
         if(board_filled)
         {
-            printf("the board is currently filled, you can tie the game(1) or continue(2)");
+            printf("the board is currently filled, you can tie the game(1) or continue(2)\n");
             scanf("%d", &option);
             if(option==1)
             {
@@ -226,6 +274,7 @@ void option_selector(char player)
             if(option!=0) {pop(pos, player); }
         }
     }
+
 }
 
 
@@ -339,8 +388,7 @@ void pop(int pos, char player)
         }
         i--;
     }
-    if(player=='#') {player='O'; }
-    else {player='#'; }
+    player_switch(&player);
     i = MAX_Y-1;
     while(!victory)
     {
@@ -369,8 +417,7 @@ int main()
     {
         option_selector(player);
         print_board();
-        if(player == '#') {player = 'O'; }
-        else {player = '#'; }
+        player_switch(&player);
     }
 
     return 0;
