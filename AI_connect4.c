@@ -14,16 +14,16 @@ TODO:
 */
 
 
-
+#define PRIME 2557
 #define MAX_Y 6
 #define MAX_X 7
 
 bool true_board[MAX_X][MAX_Y];
 char board[MAX_X][MAX_Y];
+char prev_board[MAX_X][MAX_Y];
 bool victory=false;
 bool board_filled=false;
 int state_count=0;
-char previous_board[2][MAX_X][MAX_Y];
 
 
 void initiate_board();
@@ -93,6 +93,16 @@ uint64_t hash84(Key84 k)
 
 
 
+void prev_board_state()
+{
+    for(int x=0;x<MAX_X;x++)
+    {
+        for(int y=0;y<MAX_Y;y++) {prev_board[x][y] = board[x][y]; }
+    }
+}
+
+
+
 //creates/resets the board state
 void initiate_board()
 {
@@ -101,6 +111,8 @@ void initiate_board()
         for(int x=0;x<MAX_X;x++) {board[x][y] = '_'; }
     }
 }
+
+
 
 
 void reset_true_board()
@@ -154,7 +166,7 @@ void print_ruleset()
 //selects the option you want to choose
 void option_selector(char player)
 {
-    //board_state_store();
+    prev_board_state();
     int pos=0, option=0;
     while(pos==0)
     {
