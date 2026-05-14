@@ -4,21 +4,32 @@
 #include <stdint.h>
 /*
 TODO:
--diferenciar funções entre jogadores e AI;
--criar funções para papar fruta de robô; 
+-criar sistema para empate por repetição para o bot;
+-sistema separado para o bot não acabar com o jogo nas simulações;
+-smth smth idk tou cansado;
 */
 
 
-#define PRIME 2557
+#define PRIME 3323
 #define MAX_Y 6
 #define MAX_X 7
 
-bool true_board[MAX_X][MAX_Y];
+char player = '#';
 char board[MAX_X][MAX_Y];
-char prev_board[MAX_X][MAX_Y];
+char theory_board[MAX_X][MAX_Y];
+bool true_board[MAX_X][MAX_Y];
 bool victory=false;
 bool board_filled=false;
 bool state_repeated=false;
+
+bool ai_options[8][2];
+/*
+ai_options:
+0,0 - empate
+x,0 - insert
+x,1 - pop
+*/
+
 uint64_t bucket[PRIME];
 unsigned short int bucket_count[PRIME];
 
@@ -28,29 +39,33 @@ typedef struct Key84
     uint32_t hi;
 } Key84;
 
-void initiate_board();
-void print_board();
-bool check_insert(int pos);
-void insert(char player, int pos);
-bool insert_win_con(char player, int posx, int posy);
-char pop_win_con(int posx, int posy, char player);
-int horizontal_win_con(int x, int y, char player);
-int vertical_win_con(int x, int y, char player);
-int diagonal_win_con(int x, int y, char player, int dir);
-void reset_true_board();
-bool check_top_insert(int y);
-bool check_pop(int pos, char player);
-void pop(int pos, char player);
-void print_ruleset();
-void option_selector(char player);
-void player_switch(char *player);
+
+
+//internal
 Key84 hash_parser();
 uint64_t hash84(Key84 k);
-void prev_board_state();
 void bucket_sender();
-bool check_filled_board();
+bool check_filled_board(int x);
+bool check_insert(int pos);
+bool check_pop(int pos);
+void insert(int pos);
+void pop(int pos);
+bool insert_win_con(int posx, int posy);
+bool pop_win_con(int posx, int posy);
+int horizontal_win_con(int x, int y);
+int vertical_win_con(int x, int y);
+int diagonal_win_con(int x, int y, int dir);
+void reset_true_board();
+void player_switch();
+bool ai_option_shower_helper(int x);
 
-
+//para serem usadas
+void human_option_selector();
+void init_theory_board();
+void print_ruleset();
+void print_board();
+void initiate_board();
+void ai_option_selector(int pos, int option);
 
 
 Key84 hash_parser()
@@ -111,15 +126,15 @@ void bucket_sender()
     if(bucket_count[hashed % PRIME] == 0) {bucket_count[hashed % PRIME]=1; }
     else if(bucket_count[hashed % PRIME] >= 2) {state_repeated=true; }
     else {bucket_count[hashed % PRIME]++; }
-    printf("\n%hu\n", bucket_count[hashed % PRIME]);
+    //printf("\n%hu\n", bucket_count[hashed % PRIME]);
 }
 
 
-void prev_board_state()
+void init_theory_board()
 {
     for(int x=0;x<MAX_X;x++)
     {
-        for(int y=0;y<MAX_Y;y++) {prev_board[x][y] = board[x][y]; }
+        for(int y=0;y<MAX_Y;y++) {theory_board[x][y] = board[x][y]; }
     }
 }
 
@@ -133,10 +148,10 @@ void initiate_board()
     }
 }
 
-void player_switch(char *player)
+void player_switch()
 {
-    if(*player == '#') {*player='@'; }
-    else {*player='#'; }
+    if(player == '#') {player='@'; }
+    else {player='#'; }
 }
 
 
@@ -166,33 +181,25 @@ void print_board()
     printf("\n\n");
 }
 
-
-//checks if its possible to insert, basicamente se o topo está todo cheio
-bool check_top_insert(int y)
-{
-    if(y>=MAX_Y) {return false; }
-    if(board[MAX_X-1][y] == '_') {return true; }
-    else {return check_top_insert(y++); }
-} 
-
+//regras
 void print_ruleset()
 {
-    printf("\n\n==========================================================================================");
+    printf("\n\n================================================================================================");
     printf("\nrules for PopOut:\n");
     printf("-if you wish the choose a different position after selecting, choose 0 for the option;\n");
     printf("-if there is only one option available choose any number besides 0 to confirm the play\n");
     printf("-if the board is completely filled with pieces, you will have the option to tie the game;\n");
-    printf("-if the same position is used for the same\n"); //escrever ts (this shit)
-    printf("==========================================================================================\n\n");
+    printf("-if the same position is repeated more that 3 times both players will have the option to draw\n");
+    printf("================================================================================================\n\n");
 }
 
-//selects the option you want to choose
-void option_selector(char player)
+//opções para humano selecionar, precisa de um loop externo para ser repetido
+void human_option_selector()
 {
-    prev_board_state();
+    init_theory_board();
     bucket_sender();
     int pos=0, option=0;
-    while(pos==0)
+    while(option==0)
     {
         if(state_repeated)
         {
@@ -201,9 +208,9 @@ void option_selector(char player)
             scanf("%d", &option);
             if(option!=1)
             {
-                player_switch(&player);
+                player_switch();
                 printf("\nplayer %c:", player);
-                player_switch(&player);
+                player_switch();
                 scanf("%d", &option);
             }
             if(option==1)
@@ -228,6 +235,7 @@ void option_selector(char player)
                 printf("================\n");
                 break;
             }
+            board_filled=false;
         }
         printf("player %c, choose which position(1-7) you want to target:", player);
         while(true)
@@ -236,39 +244,44 @@ void option_selector(char player)
             if(pos<8 && pos>0) {break; }
             else {printf("\nthe position must be between 1-7:"); }
         }
-        if(check_insert(pos-1) && check_pop(pos-1, player))
+        if(check_insert(pos-1) && check_pop(pos-1))
         {
-            while(true)
-            {
-                printf("choose if you want to insert(1) or pop(2):");
-                scanf("%d", &option);
-                if(option==1) {insert(player, pos); break; }
-                else if(option==2) {pop(pos, player); break; }
-            }
+            printf("choose if you want to insert(1) or pop(2):");
+            scanf("%d", &option);
+            if(option==1) {insert(pos); break; }
+            else if(option==2) {pop(pos); break; }
         }
         else if(check_insert(pos-1))
         {
             printf("you can only insert:");
             scanf("%d", &option);
-            if(option!=0) {insert(player, pos); }
+            if(option!=0) {insert(pos); }
         }
-        else
+        else if(check_pop(pos-1))
         {
             printf("you can only pop:");
             scanf("%d", &option);
-            if(option!=0) {pop(pos, player); }
+            if(option!=0) {pop(pos); }
         }
+        else {printf("you can't pop or insert, choose a different position\n"); }
     }
-
+    player_switch();
 }
 
 
-//check if you can insert in pos
+//verifica se local para inserir está livre
 bool check_insert(int pos) {return board[pos][0]=='_'; }
-//check if you can pop in pos
-bool check_pop(int pos, char player) {return board[pos][MAX_Y-1]==player; }
-//checks if the board is full
-bool check_filled_board()
+//verifica se local para pop está livre
+bool check_pop(int pos) {return board[pos][MAX_Y-1]==player; }
+
+bool check_filled_board(int x)
+{
+    if(x>=MAX_X) {return true; }
+    if(board[x][0] == '_') {return false; }
+    else return check_filled_board(x+1);
+}
+//verifica se a board está cheia
+/*bool check_filled_board(int x)
 {
     int i=0;
     while(i<MAX_X)
@@ -278,78 +291,59 @@ bool check_filled_board()
     }
     board_filled=true;
     return true;
-}
+}*/
 
-
-//allows players to insert their respective piece in the board
-void insert(char player, int pos)
+//todas as win_cons estão aqui
+bool pop_win_con(int posx, int posy)
 {
-    int y=0;
-    while(board[pos-1][y] == '_' && y<6) {y++; }
-    if(y!=0) {board[pos-1][y-1] = player; }
-    else {board[pos-1][y] = player; }
-    if(insert_win_con(player, pos-1, y-1))
-    {
-        printf("\n=================");
-        printf("\nplayer %c victory\n", player);
-        printf("=================\n");
-        victory = true;
-    }
-    if(!check_insert(pos) && check_filled_board()) {; }
-}
-
-
-char pop_win_con(int posx, int posy, char player)
-{
-    if(horizontal_win_con(posx, posy, player) >= 4) {return player; }
+    if(horizontal_win_con(posx, posy) >= 4) {return true; }
     reset_true_board();
-    if(diagonal_win_con(posx, posy, player, -1) >= 4) {return player; }
+    if(diagonal_win_con(posx, posy, -1) >= 4) {return true; }
     reset_true_board();
-    if(diagonal_win_con(posx, posy, player, 1) >= 4) {return player; }
-    reset_true_board();
-    return '_';
-}
-
-//win condition
-bool insert_win_con(char player, int posx, int posy)
-{
-    if(horizontal_win_con(posx, posy, player) >= 4) {return true; }
-    reset_true_board();
-    if(vertical_win_con(posx, posy, player) >= 4) {return true; }
-    reset_true_board();
-    if(diagonal_win_con(posx, posy, player, -1) >= 4) {return true; }
-    reset_true_board();
-    if(diagonal_win_con(posx, posy, player, 1) >= 4) {return true; }
+    if(diagonal_win_con(posx, posy, 1) >= 4) {return true; }
     reset_true_board();
     return false;
 }
 
-int horizontal_win_con(int x, int y, char player)
+bool insert_win_con(int posx, int posy)
+{
+    if(horizontal_win_con(posx, posy) >= 4) {return true; }
+    reset_true_board();
+    if(vertical_win_con(posx, posy) >= 4) {return true; }
+    reset_true_board();
+    if(diagonal_win_con(posx, posy, -1) >= 4) {return true; }
+    reset_true_board();
+    if(diagonal_win_con(posx, posy, 1) >= 4) {return true; }
+    reset_true_board();
+    return false;
+}
+
+int horizontal_win_con(int x, int y)
 {
     if(x>=MAX_X || x<=-1 || true_board[x][y] == true) {return 0; }
     true_board[x][y] = true;
     if(board[x][y]!=player) {return 0; }
-    return 1 + horizontal_win_con(x-1, y, player) + horizontal_win_con(x+1, y, player);
+    return 1 + horizontal_win_con(x-1, y) + horizontal_win_con(x+1, y);
 }
 
-int vertical_win_con(int x, int y, char player)
+int vertical_win_con(int x, int y)
 {
     if(y>=MAX_Y || y<=-1 || true_board[x][y] == true) {return 0; }
     true_board[x][y] = true;
     if(board[x][y]!=player) {return 0; }
-    return 1 + vertical_win_con(x, y-1, player) + vertical_win_con(x, y+1, player);
+    return 1 + vertical_win_con(x, y-1) + vertical_win_con(x, y+1);
 }
 
-int diagonal_win_con(int x, int y, char player, int dir)
+int diagonal_win_con(int x, int y, int dir)
 {
     if(y>=MAX_Y || y<=-1 || x>=MAX_X || x<=-1 || true_board[x][y] == true) {return 0; }
     true_board[x][y] = true;
     if(board[x][y]!=player) {return 0; }
-    return 1 + diagonal_win_con(x+1, y-dir, player, dir) + diagonal_win_con(x-1, y+dir, player, dir);
+    return 1 + diagonal_win_con(x+1, y-dir, dir) + diagonal_win_con(x-1, y+dir, dir);
 }
 
-//pop
-void pop(int pos, char player)
+////função para dar pop a pieces, também verifica vitóra
+void pop(int pos)
 {
     board[pos-1][MAX_Y-1] = '_';
     int i = MAX_Y-1;
@@ -364,7 +358,7 @@ void pop(int pos, char player)
     while(true)
     {
         if(i-1 < 0 || board[MAX_X][i-1] == '_') {break; }
-        if(!victory && pop_win_con(pos-1, i, player) != '_')
+        if(!victory && pop_win_con(pos-1, i))
         {
             printf("\n=================");
             printf("\nplayer %c victory\n", player);
@@ -374,12 +368,12 @@ void pop(int pos, char player)
         }
         i--;
     }
-    player_switch(&player);
+    player_switch();
     i = MAX_Y-1;
     while(!victory)
     {
         if(i-1 < 0 || board[MAX_X][i-1] == '_') {break; }
-        if(!victory && pop_win_con(pos-1, i, player) != '_')
+        if(!victory && pop_win_con(pos-1, i))
         {
             printf("\n=================");
             printf("\nplayer %c victory\n", player);
@@ -389,23 +383,72 @@ void pop(int pos, char player)
         }
         i--;
     }
+    player_switch();
+}
+
+//função para colocar pieces, também verifica vitóra
+void insert(int pos)
+{
+    int y=0;
+    while(board[pos-1][y] == '_' && y<6) {y++; }
+    if(y!=0) {board[pos-1][y-1] = player; }
+    else {board[pos-1][y] = player; }
+    if(insert_win_con(pos-1, y-1))
+    {
+        printf("\n=================");
+        printf("\nplayer %c victory\n", player);
+        printf("=================\n");
+        victory = true;
+    }
+    if(!check_insert(pos) && check_filled_board(0)) {board_filled=true; }
+}
+//ai_options[8][2]
+void ai_option_shower()
+{
+    if(board_filled || state_repeated) {ai_options[0][0] = true; }
+    ai_option_shower_helper(0);
+}
+
+bool ai_option_shower_helper(int x)
+{
+    if(x>=MAX_X) {return true; }
+    if(board[x][MAX_Y-1] == player) {ai_options[x+1][1] = true; }
+    else {ai_options[x+1][1] = false; }
+    if(board[x][0] == '_') {ai_options[x+1][0] = true; }
+    else {ai_options[x+1][0] = false; }
+    return ai_option_shower_helper(x+1);
 }
 
 /*
+ai_options:
+0,0 - empate
+x,0 - insert
+x,1 - pop
+*/
+
+void ai_option_selector(int pos, int option)
+{
+    if(pos == 0 && option == 0) {victory=true; }
+    else if(option == 0) {insert(pos); }
+    else {pop(pos); }
+    player_switch();
+}
+
+
+
+
 int main()
 {
     initiate_board();
     print_ruleset();
     print_board();
     reset_true_board();
-    char player='#';
+    ai_option_shower();
     while(!victory)
     {
-        option_selector(player);
+        human_option_selector();
         print_board();
-        player_switch(&player);
     }
 
     return 0;
 }
-*/
