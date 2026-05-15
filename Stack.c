@@ -4,7 +4,7 @@
 
 typedef struct Node
 {
-    int value;
+    uint64_t value;
     struct Node* prev;
 }Node;
 
@@ -25,7 +25,7 @@ bool isEmpty(Stack *s)
     return s->size==0;
 }
 
-void add(Stack *s, int value)
+void add(Stack *s, uint64_t value)
 {
     s->size++;
     Node* newNode = malloc(sizeof(Node));
@@ -34,19 +34,20 @@ void add(Stack *s, int value)
     s -> top = newNode;
 }
 
-bool pop(Stack *s)
+uint8_t sPop(Stack *s)
 {
-    if(s->size==0) return false;
+    if(s->size==0) return 0;
     s->size--;
     Node* oldNode = s->top;
+    uint8_t value = oldNode -> value;
     s -> top = oldNode -> prev;
     free(oldNode);
-    return true;
+    return value;
 }
 
 void clear(Stack *s)
 {
-    while(pop(s));
+    while(sPop(s));
 }
 
 void printStack(Stack *s)

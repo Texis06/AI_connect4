@@ -3,12 +3,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "Stack.c"
-/*
-TODO:
--criar theory board plays;
--criar theory bucket handler;
--criar sistema para limpar theory bucket;
-*/
 
 
 #define PRIME 5003
@@ -128,13 +122,13 @@ void bucket_sender()
     uint64_t hashed = hash84(x86);
     bucket [hashed % PRIME] = hashed;
     if(bucket_count[hashed % PRIME] == 0) {bucket_count[hashed % PRIME]=1; }
-    else if(bucket_count[hashed % PRIME] >= 2) {state_repeated=true; }
+    else if(bucket_count[hashed % PRIME] >= 2) {bucket_count[hashed % PRIME]++; state_repeated=true; }
     else {bucket_count[hashed % PRIME]++; }
     //printf("\n%hu\n", bucket_count[hashed % PRIME]);
 }
 
 
-void init_theory_board()
+void reset_theory_board()
 {
     for(int x=0;x<MAX_X;x++)
     {
@@ -398,22 +392,15 @@ void insert(int pos)
 //opções ai aqui para a frente
 /*===================================================================================================*/
 
-//ai_options[8][2]
-void ai_option_shower()
-{
-    if(board_filled || state_repeated) {ai_options[0][0] = true; }
-    ai_option_shower_helper(0);
-}
 
-bool ai_option_shower_helper(int x)
-{
-    if(x>=MAX_X) {return true; }
-    if(board[x][MAX_Y-1] == player) {ai_options[x+1][1] = true; }
-    else {ai_options[x+1][1] = false; }
-    if(board[x][0] == '_') {ai_options[x+1][0] = true; }
-    else {ai_options[x+1][0] = false; }
-    return ai_option_shower_helper(x+1);
-}
+/*
+explicação para as theory boards: 
+-theory_board_insert - coloca as coisas na theory board, retorna 0 se não houver vitória, retorna 1 se houver vitória
+-theory_board_pop - dá pop às coisas na theory board, rotorna 0 se não houver vitória, retorna 1 se houver vitória, retorna -1 se houver derrota
+-ai_option_selector - seleciona as opções para jogar, não se aplica à theory board
+-ai_option_shower - indica todas as opções disponíveis para o jogo quando a flag é verdadeira e para a theory quando está false no array ai_options[8][2], sendo a configuração deste mostrada mais abaixo
+-theory_option_selector - serve para selecionar opções na theory_board
+*/
 
 /*
 ai_options:
@@ -421,6 +408,49 @@ ai_options:
 x,0 - insert
 x,1 - pop
 */
+
+
+
+void ai_option_shower(bool flag)
+{
+    if(board_filled || state_repeated) {ai_options[0][0] = true; }
+    if(flag) {game_option_shower_helper(0); }
+    else {theory_option_shower_helper(0); }
+}
+
+bool game_option_shower_helper(int x)
+{
+    if(x>=MAX_X) {return true; }
+    if(board[x][MAX_Y-1] == player) {ai_options[x+1][1] = true; }
+    else {ai_options[x+1][1] = false; }
+    if(board[x][0] == '_') {ai_options[x+1][0] = true; }
+    else {ai_options[x+1][0] = false; }
+    return game_option_shower_helper(x+1);
+}
+
+bool theory_option_shower_helper(int x)
+{
+    if(x>=MAX_X) {return true; }
+    if(theory_board[x][MAX_Y-1] == player) {ai_options[x+1][1] = true; }
+    else {ai_options[x+1][1] = false; }
+    if(theory_board[x][0] == '_') {ai_options[x+1][0] = true; }
+    else {ai_options[x+1][0] = false; }
+    return theory_option_shower_helper(x+1);
+}
+
+void theory_option_selector(int pos, int option)
+{
+    if(pos == 0 && option == 0)
+    {
+        victory=true;
+        printf("\n================");
+        printf(" the game ended with a tie ");
+        printf("================\n");
+    }
+    else if(option == 0) {theory_board_insert(pos); }
+    else {theory_board_pop(pos); }
+    player_switch();
+}
 
 void ai_option_selector(int pos, int option)
 {
@@ -435,6 +465,7 @@ void ai_option_selector(int pos, int option)
     else {pop(pos); }
     player_switch();
 }
+
 
 int theory_board_insert(int pos)
 {
@@ -480,12 +511,69 @@ int theory_board_pop(int pos)
     return 0;
 }
 
+void theory_bucket_store(Stack *s)
+{
+    Key84 x86 = theory_hash_parser();
+    uint64_t hashed = hash84(x86);
+    add(&s, hashed%PRIME);
+    if(bucket_count[hashed % PRIME] == 0) {bucket_count[hashed % PRIME]=1; }
+    else if(bucket_count[hashed % PRIME] >= 2) {bucket_count[hashed % PRIME]++; theory_state_repeated=true; }
+    else {bucket_count[hashed % PRIME]++; }
+    //printf("\n%hu\n", bucket_count[hashed % PRIME]);
+}
 
 
+void theory_bucket_reset(Stack *s)
+{
+    while(!isEmpty(&s))
+    {bucket_count[sPop(&s)]--; }
+}
 
 
+Key84 theory_hash_parser()
+{
+    Key84 x84 = {0,0};
+    char *ptr = &theory_board[0][0];
+    
+    for(int i=0;i<MAX_X*MAX_Y;i++)
+    {
+        uint8_t v=0;
+    
+        switch(*(ptr + i))
+        {
+            case '@':
+            v |= 1;
+            break;
+
+            case '#':
+            v |= 2;
+            break;
+
+            case '_':
+            break;
+        }
+        uint32_t carry = (x84.lo >> 62) & 0x3;
+        // shift both halves
+        x84.lo <<= 2;
+        x84.hi <<= 2;
+        // move overflow bits into hi
+        x84.hi |= carry;
+        // insert new symbol
+        x84.lo |= v;
+    }
+    return x84;
+}
 
 
+/*
+TODO:
+-criar theory board plays; X
+-criar theory bucket handler; X
+-criar sistema para limpar theory bucket; X
+*/
+
+
+/*
 
 int main()
 {
@@ -502,3 +590,66 @@ int main()
 
     return 0;
 }
+
+void bucket_sender()
+{
+    Key84 x86 = hash_parser();
+    uint64_t hashed = hash84(x86);
+    bucket [hashed % PRIME] = hashed;
+    if(bucket_count[hashed % PRIME] == 0) {bucket_count[hashed % PRIME]=1; }
+    else if(bucket_count[hashed % PRIME] >= 2) {bucket_count[hashed % PRIME]++; state_repeated=true; }
+    else {bucket_count[hashed % PRIME]++; }
+    //printf("\n%hu\n", bucket_count[hashed % PRIME]);
+
+    
+Key84 hash_parser()
+{
+    Key84 x84 = {0,0};
+    char *ptr = &theory_board[0][0];
+    
+    for(int i=0;i<MAX_X*MAX_Y;i++)
+    {
+        uint8_t v=0;
+    
+        switch(*(ptr + i))
+        {
+            case '@':
+            v |= 1;
+            break;
+
+            case '#':
+            v |= 2;
+            break;
+
+            case '_':
+            break;
+        }
+        uint32_t carry = (x84.lo >> 62) & 0x3;
+        // shift both halves
+        x84.lo <<= 2;
+        x84.hi <<= 2;
+        // move overflow bits into hi
+        x84.hi |= carry;
+        // insert new symbol
+        x84.lo |= v;
+    }
+    return x84;
+}
+
+uint64_t hash84(Key84 k)
+{
+    uint64_t x = k.lo;
+
+    x ^= ((uint64_t)k.hi << 32);
+
+    // splitmix64 finalizer
+    x ^= x >> 30;
+    x *= 0xbf58476d1ce4e5b9ULL;
+    x ^= x >> 27;
+    x *= 0x94d049bb133111ebULL;
+    x ^= x >> 31;
+
+    return x;
+}
+}
+*/
