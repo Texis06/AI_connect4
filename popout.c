@@ -2,25 +2,29 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include "Stack.c"
 /*
 TODO:
--criar sistema para empate por repetição para o bot;
--sistema separado para o bot não acabar com o jogo nas simulações;
--smth smth idk tou cansado;
+-criar theory board plays;
+-criar theory bucket handler;
+-criar sistema para limpar theory bucket;
 */
 
 
-#define PRIME 3323
+#define PRIME 5003
 #define MAX_Y 6
 #define MAX_X 7
 
 char player = '#';
 char board[MAX_X][MAX_Y];
-char theory_board[MAX_X][MAX_Y];
 bool true_board[MAX_X][MAX_Y];
 bool victory=false;
 bool board_filled=false;
 bool state_repeated=false;
+
+char theory_board[MAX_X][MAX_Y];
+bool theory_board_filled=false;
+bool theory_state_repeated=false;
 
 bool ai_options[8][2];
 /*
@@ -196,7 +200,6 @@ void print_ruleset()
 //opções para humano selecionar, precisa de um loop externo para ser repetido
 void human_option_selector()
 {
-    init_theory_board();
     bucket_sender();
     int pos=0, option=0;
     while(option==0)
@@ -250,6 +253,7 @@ void human_option_selector()
             scanf("%d", &option);
             if(option==1) {insert(pos); break; }
             else if(option==2) {pop(pos); break; }
+            else {option=0; }
         }
         else if(check_insert(pos-1))
         {
@@ -280,18 +284,6 @@ bool check_filled_board(int x)
     if(board[x][0] == '_') {return false; }
     else return check_filled_board(x+1);
 }
-//verifica se a board está cheia
-/*bool check_filled_board(int x)
-{
-    int i=0;
-    while(i<MAX_X)
-    {
-        if(board[i][0]=='_') {return false; }
-        i++;
-    }
-    board_filled=true;
-    return true;
-}*/
 
 //todas as win_cons estão aqui
 bool pop_win_con(int posx, int posy)
@@ -370,7 +362,7 @@ void pop(int pos)
     }
     player_switch();
     i = MAX_Y-1;
-    while(!victory)
+    while(true)
     {
         if(i-1 < 0 || board[MAX_X][i-1] == '_') {break; }
         if(!victory && pop_win_con(pos-1, i))
@@ -402,6 +394,10 @@ void insert(int pos)
     }
     if(!check_insert(pos) && check_filled_board(0)) {board_filled=true; }
 }
+
+//opções ai aqui para a frente
+/*===================================================================================================*/
+
 //ai_options[8][2]
 void ai_option_shower()
 {
@@ -428,11 +424,65 @@ x,1 - pop
 
 void ai_option_selector(int pos, int option)
 {
-    if(pos == 0 && option == 0) {victory=true; }
+    if(pos == 0 && option == 0) 
+    {
+        victory=true; 
+        printf("\n================");
+        printf(" the game ended with a tie ");
+        printf("================\n");
+    }
     else if(option == 0) {insert(pos); }
     else {pop(pos); }
     player_switch();
 }
+
+int theory_board_insert(int pos)
+{
+    int y=0;
+    while(theory_board[pos-1][y] == '_' && y<6) {y++; }
+    if(y!=0) {theory_board[pos-1][y-1] = player; }
+    else {theory_board[pos-1][y] = player; }
+    if(insert_win_con(pos-1, y-1))
+    {
+        return 1;
+    }
+    if(!check_insert(pos) && check_filled_board(0)) {theory_board_filled=true; }
+    return 0;
+}
+
+int theory_board_pop(int pos)
+{
+    theory_board[pos-1][MAX_Y-1] = '_';
+    int i = MAX_Y-1;
+    while(true)
+    {
+        if(i-1 < 0 || theory_board[MAX_X][i-1] == '_') {break; }
+        theory_board[pos-1][i] = theory_board[pos-1][i-1];
+        i--;
+    }
+    theory_board[pos-1][i] = '_';
+    i = MAX_Y-1;
+    while(true)
+    {
+        if(i-1 < 0 || theory_board[MAX_X][i-1] == '_') {break; }
+        if(pop_win_con(pos-1, i)) {return 1; }
+        i--;
+    }
+    player_switch();
+    i = MAX_Y-1;
+    while(true)
+    {
+        if(i-1 < 0 || theory_board[MAX_X][i-1] == '_') {break; }
+        if(pop_win_con(pos-1, i)) {return -1; }
+        i--;
+    }
+    player_switch();
+    return 0;
+}
+
+
+
+
 
 
 
