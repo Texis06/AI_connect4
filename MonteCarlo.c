@@ -23,9 +23,7 @@ void copy_board(char original[MAX_X][MAX_Y], char copy[MAX_X][MAX_Y]){
 #include <time.h>
 #include "popout.c"
 
-/*=========================================================
-MCTS STRUCTURES
-=========================================================*/
+
 
 typedef struct
 {
@@ -61,6 +59,7 @@ typedef struct Node
 
 } Node;
 
+// copia um board state para outra board
 void copy_board(char src[MAX_X][MAX_Y],
                 char dst[MAX_X][MAX_Y])
 {
@@ -73,7 +72,8 @@ void copy_board(char src[MAX_X][MAX_Y],
     }
 }
 
-
+// copia um board state para o theory board
+// theory board é o board do "jogo falso" do MCTS
 void load_theory_board(char src[MAX_X][MAX_Y])
 {
     for(int x=0;x<MAX_X;x++)
@@ -85,7 +85,7 @@ void load_theory_board(char src[MAX_X][MAX_Y])
     }
 }
 
-
+// copia o state atual do theory board para outro (efetivamente guardando-o)
 void save_theory_board(char dst[MAX_X][MAX_Y])
 {
     for(int x=0;x<MAX_X;x++)
@@ -97,6 +97,7 @@ void save_theory_board(char dst[MAX_X][MAX_Y])
     }
 }
 
+// dá reset às opções de jogadas do AI (para usar no final de uma jogada)
 void clear_ai_options()
 {
     for(int i=0;i<8;i++)
@@ -108,6 +109,7 @@ void clear_ai_options()
     }
 }
 
+// dá novas opções de jogaadas ao AI
 int generate_moves(Move moves[])
 {
     clear_ai_options();
@@ -143,6 +145,7 @@ int generate_moves(Move moves[])
     return count;
 }
 
+// manda o AI fazer um movimento
 int apply_move(Move m)
 {
     if(m.pos == 0)
@@ -166,6 +169,7 @@ int apply_move(Move m)
     return result;
 }
 
+// função para criar um node com um estado da board num local específico da árvore do MCTS 
 Node *create_node(Node *parent,
                   Move move,
                   char board[MAX_X][MAX_Y],
@@ -192,22 +196,29 @@ Node *create_node(Node *parent,
     return n;
 }
 
+// cálculo do Upper Confidence Bound para árvore
+// este valor é o que decide qual é o node mais "promissor" (ou seja, qual é que vai ser jogado)
 double uct(Node *parent, Node *child)
 {
     if(child->visits == 0)
     {
         return 1e9;
     }
-
+     //exploitation é o rácio direto entre jogos vencidos e totais (também chamado normalmente de "win ratio")
     double exploitation = child->wins
                         / child->visits;
-
+     // exploration dá prioridade aos nodes que foram escolhidos para uma simulação mais vezes
+     /* o parent, devido a backpropatation, vai ter todas as visitas feitas aos seus filhos como as suas visitas
+      * logo, a divisão dentro da raiz quadrada irá dar um rácio que demonstra qual a parte de visitas aos filhos que foi este filho em específico
+      */
     double exploration = sqrt(log(parent->visits)
                          / child->visits);
-
+      //1.414 é a raiz quadrada de 2 arredondada
+      //serve para aumentar a relevância do exploration no cálculo do UCT 
     return exploitation + 1.414 * exploration;
 }
 
+// faz o cálculo do UCT para todos os filhos e escolhe o melhor deles
 Node *select_node(Node *root)
 {
     Node *current = root;
@@ -237,6 +248,8 @@ Node *select_node(Node *root)
     return current;
 }
 
+// função para expandir um node (criar os seus filhos, ou seja, criar nodes para todas as jogadas possíveis)
+// esta função também já coloca o node atual na board de "jogo falso"
 Node *expand(Node *node)
 {
     load_theory_board(node->board);
@@ -275,6 +288,7 @@ Node *expand(Node *node)
     return node->children[rand()%node->child_count];
 }
 
+// execução do jogo falso do MonteCarlo
 double rollout(Node *node)
 {
     load_theory_board(node->board);
@@ -286,7 +300,7 @@ double rollout(Node *node)
         Move moves[32];
 
         int count = generate_moves(moves);
-
+        // 0.5 é usado como um valor-erro (já que não é inteiro)
         if(count == 0)
         {
             return 0.5;
@@ -295,7 +309,8 @@ double rollout(Node *node)
         Move m = moves[rand()%count];
 
         int result = apply_move(m);
-
+       
+        //valor ao ganhar irá ser adicionado ao node ao dar return
         if(result == 1)
         {
             return 1.0;
@@ -310,6 +325,7 @@ double rollout(Node *node)
     return 0.5;
 }
 
+// função para adicionar a todos os nodes anteriores na árvore o resultado do jogo do rollout
 void backpropagate(Node *node,
                    double result)
 {
@@ -327,6 +343,7 @@ void backpropagate(Node *node,
     }
 }
 
+// função para libertar a memória da árvore do MCTS 
 void free_tree(Node *node)
 {
     if(node == NULL)
@@ -342,6 +359,7 @@ void free_tree(Node *node)
     free(node);
 }
 
+// junção de todo o código executado numa jogada pelo MonteCarlo 
 Move monte_carlo_move(int iterations)
                              root_move,
                              board,
@@ -389,6 +407,7 @@ Move monte_carlo_move(int iterations)
     return answer;
 }
 
+// informação para o usuário sobre o que é que o AI fez 
 void ai_turn(int iterations)
 {
     Move best = monte_carlo_move(iterations);
