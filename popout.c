@@ -55,16 +55,24 @@ int vertical_win_con(int x, int y);
 int diagonal_win_con(int x, int y, int dir);
 void reset_true_board();
 void player_switch();
-bool ai_option_shower_helper(int x);
+bool game_option_shower_helper(int x);
+bool theory_option_shower_helper(int x);
+int theory_board_insert(int pos);
+int theory_board_pop(int pos);
+void theory_bucket_store(Stack *s);
+void theory_bucket_reset(Stack *s);
+Key84 theory_hash_parser();
+
 
 //para serem usadas
 void human_option_selector();
-void init_theory_board();
+void reset_theory_board();
 void print_ruleset();
 void print_board();
 void initiate_board();
-void ai_option_selector(int pos, int option);
-
+void ai_option_shower(bool flag);
+void theory_option_selector(int pos, int option);
+void game_option_selector(int pos, int option);
 
 Key84 hash_parser()
 {
@@ -452,7 +460,7 @@ void theory_option_selector(int pos, int option)
     player_switch();
 }
 
-void ai_option_selector(int pos, int option)
+void game_option_selector(int pos, int option)
 {
     if(pos == 0 && option == 0) 
     {
@@ -515,7 +523,7 @@ void theory_bucket_store(Stack *s)
 {
     Key84 x86 = theory_hash_parser();
     uint64_t hashed = hash84(x86);
-    add(&s, hashed%PRIME);
+    add(s, hashed%PRIME);
     if(bucket_count[hashed % PRIME] == 0) {bucket_count[hashed % PRIME]=1; }
     else if(bucket_count[hashed % PRIME] >= 2) {bucket_count[hashed % PRIME]++; theory_state_repeated=true; }
     else {bucket_count[hashed % PRIME]++; }
@@ -525,8 +533,8 @@ void theory_bucket_store(Stack *s)
 
 void theory_bucket_reset(Stack *s)
 {
-    while(!isEmpty(&s))
-    {bucket_count[sPop(&s)]--; }
+    while(!isEmpty(s))
+    {bucket_count[sPop(s)]--; }
 }
 
 
@@ -564,16 +572,8 @@ Key84 theory_hash_parser()
     return x84;
 }
 
-
 /*
-TODO:
--criar theory board plays; X
--criar theory bucket handler; X
--criar sistema para limpar theory bucket; X
-*/
 
-
-/*
 
 int main()
 {
@@ -581,75 +581,13 @@ int main()
     print_ruleset();
     print_board();
     reset_true_board();
-    ai_option_shower();
-    while(!victory)
-    {
-        human_option_selector();
-        print_board();
-    }
-
-    return 0;
-}
-
-void bucket_sender()
-{
-    Key84 x86 = hash_parser();
-    uint64_t hashed = hash84(x86);
-    bucket [hashed % PRIME] = hashed;
-    if(bucket_count[hashed % PRIME] == 0) {bucket_count[hashed % PRIME]=1; }
-    else if(bucket_count[hashed % PRIME] >= 2) {bucket_count[hashed % PRIME]++; state_repeated=true; }
-    else {bucket_count[hashed % PRIME]++; }
-    //printf("\n%hu\n", bucket_count[hashed % PRIME]);
-
+    reset_theory_board();
+    ai_option_shower(true);
+    theory_board_insert(5);
+    theory_board_insert(5);
+    ai_option_shower(false);
+    theory_board_pop(5);
+    ai_option_shower(false);
     
-Key84 hash_parser()
-{
-    Key84 x84 = {0,0};
-    char *ptr = &theory_board[0][0];
-    
-    for(int i=0;i<MAX_X*MAX_Y;i++)
-    {
-        uint8_t v=0;
-    
-        switch(*(ptr + i))
-        {
-            case '@':
-            v |= 1;
-            break;
-
-            case '#':
-            v |= 2;
-            break;
-
-            case '_':
-            break;
-        }
-        uint32_t carry = (x84.lo >> 62) & 0x3;
-        // shift both halves
-        x84.lo <<= 2;
-        x84.hi <<= 2;
-        // move overflow bits into hi
-        x84.hi |= carry;
-        // insert new symbol
-        x84.lo |= v;
-    }
-    return x84;
-}
-
-uint64_t hash84(Key84 k)
-{
-    uint64_t x = k.lo;
-
-    x ^= ((uint64_t)k.hi << 32);
-
-    // splitmix64 finalizer
-    x ^= x >> 30;
-    x *= 0xbf58476d1ce4e5b9ULL;
-    x ^= x >> 27;
-    x *= 0x94d049bb133111ebULL;
-    x ^= x >> 31;
-
-    return x;
-}
 }
 */
