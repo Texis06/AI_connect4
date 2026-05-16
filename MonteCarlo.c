@@ -361,6 +361,10 @@ void free_tree(Node *node)
 
 // junção de todo o código executado numa jogada pelo MonteCarlo 
 Move monte_carlo_move(int iterations)
+{
+    Move root_move = {0,0};
+
+    Node *root = create_node(NULL,
                              root_move,
                              board,
                              player);
