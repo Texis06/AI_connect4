@@ -2,15 +2,15 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-typedef struct Node
+typedef struct SNode
 {
     uint64_t value;
-    struct Node* prev;
-}Node;
+    struct SNode* prev;
+}SNode;
 
 typedef struct
 {
-    Node* top;
+    SNode* top;
     int size;
 }Stack;
 
@@ -28,7 +28,7 @@ bool isEmpty(Stack *s)
 void add(Stack *s, uint64_t value)
 {
     s->size++;
-    Node* newNode = malloc(sizeof(Node));
+    SNode* newNode = malloc(sizeof(SNode));
     newNode -> value = value;
     newNode -> prev = s -> top;
     s -> top = newNode;
@@ -38,7 +38,7 @@ uint64_t sPop(Stack *s)
 {
     if(s->size==0) return 0;
     s->size--;
-    Node* oldNode = s->top;
+    SNode* oldNode = s->top;
     uint64_t value = oldNode -> value;
     s -> top = oldNode -> prev;
     free(oldNode);
@@ -53,7 +53,7 @@ void clear(Stack *s)
 void printStack(Stack *s)
 {
     if(s -> size == 0) {return; }
-    Node* node = s -> top;
+    SNode* node = s -> top;
     printf("\n%lld,", node -> value);
     while(node -> prev != NULL)
     {
