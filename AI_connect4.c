@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include "popout.c"
-//#include "MonteCarlo.c"
+//#include "popout.c"
+#include "MonteCarlo.c"
 
 
 int main()
@@ -26,7 +26,17 @@ int main()
         }
         case 2:
         {
-            
+            print_ruleset();
+            while(!victory)
+            {
+                print_board();
+                human_option_selector();
+                if(!victory)
+                {
+                    //player_switch();
+                    ai_turn(5000);
+                }
+            }
             break;
         }
         case 3:
