@@ -55,11 +55,11 @@ void printStack(Stack *s)
 {
     if(s -> size == 0) {return; }
     SNode* node = s -> top;
-    printf("\n%llu,", node -> value);
+    printf("\n%lu,", node -> value);
     while(node -> prev != NULL)
     {
         node = node -> prev;
-        printf("%llu", node -> value);
+        printf("%lu", node -> value);
         if(node -> prev != NULL) {printf(","); }
     }
 }
