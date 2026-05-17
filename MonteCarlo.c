@@ -233,7 +233,7 @@ Node *expand(Node *node)
 {
     load_theory_board(node->board);
     
-    theory_player = node->current_player;
+    char theory_player = node->current_player;
 
     Move moves[32];
 
