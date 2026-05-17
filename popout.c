@@ -159,7 +159,7 @@ void player_switch()
     if(player == '#') {player='@'; }
     else {player='#'; }
 }
-
+//printf("\n%c\n", player); 
 
 void reset_true_board()
 {
@@ -481,7 +481,7 @@ int theory_board_insert(int pos)
     while(theory_board[pos-1][y] == '_' && y<6) {y++; }
     if(y!=0) {theory_board[pos-1][y-1] = player; }
     else {theory_board[pos-1][y] = player; }
-    if(insert_win_con(pos-1, y-1))
+    if(theory_insert_win_con(pos-1, y-1))
     {
         return 1;
     }
@@ -504,7 +504,7 @@ int theory_board_pop(int pos)
     while(true)
     {
         if(i-1 < 0 || theory_board[MAX_X][i-1] == '_') {break; }
-        if(pop_win_con(pos-1, i)) {return 1; }
+        if(theory_pop_win_con(pos-1, i)) {return 1; }
         i--;
     }
     player_switch();
@@ -512,7 +512,7 @@ int theory_board_pop(int pos)
     while(true)
     {
         if(i-1 < 0 || theory_board[MAX_X][i-1] == '_') {break; }
-        if(pop_win_con(pos-1, i)) {return -1; }
+        if(theory_pop_win_con(pos-1, i)) {player_switch(); return -1; }
         i--;
     }
     player_switch();
@@ -570,6 +570,57 @@ Key84 theory_hash_parser()
         x84.lo |= v;
     }
     return x84;
+}
+
+
+
+//todas as win_cons estão aqui
+bool theory_pop_win_con(int posx, int posy)
+{
+    if(theory_horizontal_win_con(posx, posy) >= 4) {return true; }
+    reset_true_board();
+    if(theory_diagonal_win_con(posx, posy, -1) >= 4) {return true; }
+    reset_true_board();
+    if(theory_diagonal_win_con(posx, posy, 1) >= 4) {return true; }
+    reset_true_board();
+    return false;
+}
+
+bool theory_insert_win_con(int posx, int posy)
+{
+    if(theory_horizontal_win_con(posx, posy) >= 4) {return true; }
+    reset_true_board();
+    if(theory_vertical_win_con(posx, posy) >= 4) {return true; }
+    reset_true_board();
+    if(theory_diagonal_win_con(posx, posy, -1) >= 4) {return true; }
+    reset_true_board();
+    if(theory_diagonal_win_con(posx, posy, 1) >= 4) {return true; }
+    reset_true_board();
+    return false;
+}
+
+int theory_horizontal_win_con(int x, int y)
+{
+    if(x>=MAX_X || x<=-1 || true_board[x][y] == true) {return 0; }
+    true_board[x][y] = true;
+    if(theory_board[x][y]!=player) {return 0; }
+    return 1 + theory_horizontal_win_con(x-1, y) + theory_horizontal_win_con(x+1, y);
+}
+
+int theory_vertical_win_con(int x, int y)
+{
+    if(y>=MAX_Y || y<=-1 || true_board[x][y] == true) {return 0; }
+    true_board[x][y] = true;
+    if(theory_board[x][y]!=player) {return 0; }
+    return 1 + theory_vertical_win_con(x, y-1) + theory_vertical_win_con(x, y+1);
+}
+
+int theory_diagonal_win_con(int x, int y, int dir)
+{
+    if(y>=MAX_Y || y<=-1 || x>=MAX_X || x<=-1 || true_board[x][y] == true) {return 0; }
+    true_board[x][y] = true;
+    if(theory_board[x][y]!=player) {return 0; }
+    return 1 + theory_diagonal_win_con(x+1, y-dir, dir) + theory_diagonal_win_con(x-1, y+dir, dir);
 }
 
 /*
