@@ -519,6 +519,12 @@ int theory_board_pop(int pos)
     return 0;
 }
 
+
+bool theory_check_insert(int pos) {return theory_board[pos][0]=='_'; }
+//verifica se local para pop está livre
+bool theory_check_pop(int pos) {return theory_board[pos][MAX_Y-1]==player; }
+
+
 void theory_bucket_store(Stack *s)
 {
     Key84 x86 = theory_hash_parser();
