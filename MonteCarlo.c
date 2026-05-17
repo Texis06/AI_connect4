@@ -1,23 +1,5 @@
-/*
+
 #include "popout.c"
-
-typedef struct {
-  int state[MAX_X][MAX_Y];
-  int totalvictory = 0;
-  int totalVisits = 0;
-  // número máximo de moves possíveis numa jogada é 14, logo 32 entries é o suficiente
-  MCTSNode * nextNodes[32];
-  MCTSNode * parentNode;
-} MCTSNode;
-
-// função para copiar um state para outra variável/board
-void copy_board(char original[MAX_X][MAX_Y], char copy[MAX_X][MAX_Y]){
-  for(int x=0;x<MAX_X;x++) {
-    for(int y=0;y<MAX_Y;y++) {dst[x][y] = src[x][y];}
-  }
-}
-
-*/
 
 #include <math.h>
 #include <time.h>
