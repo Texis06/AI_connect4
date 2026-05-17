@@ -235,8 +235,8 @@ Node *select_node(Node *root)
 Node *expand(Node *node)
 {
     load_theory_board(node->board);
-
-    player = node->current_player;
+    
+    theory_player = node->current_player;
 
     Move moves[32];
 
@@ -246,7 +246,7 @@ Node *expand(Node *node)
     {
         load_theory_board(node->board);
 
-        player = node->current_player;
+        theory_player = node->current_player;
 
         Move m = moves[i];
 
@@ -255,7 +255,7 @@ Node *expand(Node *node)
         Node *child = create_node(node,
                                   m,
                                   theory_board,
-                                  player);
+                                  theory_player);
 
         node->children[node->child_count++] = child;
     }
