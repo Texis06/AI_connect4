@@ -2,7 +2,7 @@
 #include <time.h>
 #include "popout.c"
 
-
+char theory_player;
 
 typedef struct
 {
@@ -87,6 +87,49 @@ void clear_ai_options()
         }
     }
 }
+
+
+int theory_horizontal_win_con(int x, int y)
+{
+    if(x>=MAX_X || x<=-1 || theory_board[x][y] == theory_player) {return 0; }
+    theory_board[x][y] = theory_player;
+    if(theory_board[x][y]!= theory_player) {return 0; }
+    return 1 + theory_horizontal_win_con(x-1, y) + theory_horizontal_win_con(x+1, y);
+}
+
+int theory_vertical_win_con(int x, int y)
+{
+    if(y>=MAX_Y || y<=-1 || theory_board[x][y] == theory_player) {return 0; }
+    theory_board[x][y] = theory_player;
+    if(theory_board[x][y]!= theory_player) {return 0; }
+    return 1 + theory_vertical_win_con(x, y-1) + theory_vertical_win_con(x, y+1);
+}
+
+int theory_diagonal_win_con(int x, int y, int dir)
+{
+    if(y>=MAX_Y || y<=-1 || x>=MAX_X || x<=-1 || theory_board[x][y] == theory_player) {return 0; }
+    theory_board[x][y] = theory_player;
+    if(board[x][y]!=theory_player) {return 0; }
+    return 1 + theory_diagonal_win_con(x+1, y-dir, dir) + theory_diagonal_win_con(x-1, y+dir, dir);
+}
+
+bool theory_pop_win_con(int posx, int posy)
+{
+    if(theory_horizontal_win_con(posx, posy) >= 4) {return true; }
+    if(theory_diagonal_win_con(posx, posy, -1) >= 4) {return true; }
+    if(theory_diagonal_win_con(posx, posy, 1) >= 4) {return true; }
+    return false;
+}
+
+bool theory_insert_win_con(int posx, int posy)
+{
+    if(theory_horizontal_win_con(posx, posy) >= 4) {return true; }
+    if(theory_vertical_win_con(posx, posy) >= 4) {return true; }
+    if(theory_diagonal_win_con(posx, posy, -1) >= 4) {return true; }
+    if(theory_diagonal_win_con(posx, posy, 1) >= 4) {return true; }
+    return false;
+}
+
 
 // dá novas opções de jogaadas ao AI
 int generate_moves(Move moves[])
@@ -274,7 +317,7 @@ double rollout(Node *node)
 
     player = node->current_player;
 
-    for(int depth=0; depth<200; depth++)
+    for(int depth=0; depth<1000; depth++)
     {
         Move moves[32];
 
@@ -284,7 +327,10 @@ double rollout(Node *node)
         {
             return 0.5;
         }
-
+        
+        if (theory_pop_win_con(0, 0) || theory_insert_win_con(0, 0)){
+        return 1.0;
+       }
         Move m = moves[rand()%count];
 
         int result = apply_move(m);
