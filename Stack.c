@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 typedef struct SNode
 {
@@ -54,11 +55,11 @@ void printStack(Stack *s)
 {
     if(s -> size == 0) {return; }
     SNode* node = s -> top;
-    printf("\n%lld,", node -> value);
+    printf("\n%llu,", node -> value);
     while(node -> prev != NULL)
     {
         node = node -> prev;
-        printf("%lld", node -> value);
+        printf("%llu", node -> value);
         if(node -> prev != NULL) {printf(","); }
     }
 }
