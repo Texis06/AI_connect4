@@ -15,7 +15,6 @@ typedef struct
     */
 } Move;
 
-
 typedef struct Node
 {
     char board[MAX_X][MAX_Y];
@@ -37,6 +36,8 @@ typedef struct Node
     bool fully_expanded;
 
 } Node;
+
+void theory_player_switch();
 
 // copia um board state para outra board
 void copy_board(char src[MAX_X][MAX_Y],
@@ -272,7 +273,7 @@ double rollout(Node *node)
 {
     load_theory_board(node->board);
 
-    player = node->current_player;
+    theory_player = node->current_player;
 
     for(int depth=0; depth<1000; depth++)
     {
@@ -305,6 +306,11 @@ double rollout(Node *node)
     }
 
     return 0.5;
+}
+
+void theory_player_switch(){
+  if(theory_player == '#') { theory_player = '@';}
+  else {theory_player = '#';}
 }
 
 // função para adicionar a todos os nodes anteriores na árvore o resultado do jogo do rollout
