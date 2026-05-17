@@ -146,20 +146,15 @@ def print_tree(tree, indent=0):
 # ─────────────────────────────────────────────
 
 def main():
-    # --- Load Iris from sklearn (no CSV file needed) ---
-    iris = load_iris(as_frame=True)
-    df = iris.frame.rename(columns={"target": "Class"})
+    discretise_flag = False
+    # --- Load dataframe
+    
+    df = pd.read_csv("Bata_dase.csv")
+    
+    df = df.frame.rename(columns={"jogada": "Class"})
 
-    # Map numeric class labels to species names for readability
-    label_map = {0: "setosa", 1: "versicolor", 2: "virginica"}
-    df["Class"] = df["Class"].map(label_map)
-
-    feature_cols = list(iris.feature_names)
-
-    print("=" * 60)
-    print("Iris dataset — first 5 rows")
-    print("=" * 60)
-    print(df.head(), "\n")
+    
+    feature_cols = list(df.feature_names)
 
     # --- Train / test split (80 / 20, stratified) ---
     train_df, test_df = train_test_split(df, test_size=0.2,
@@ -168,24 +163,13 @@ def main():
     test_df  = test_df.reset_index(drop=True)
 
     # --- Discretise continuous features (fit on train only) ---
-    train_disc, bin_edges = discretise(train_df, feature_cols, n_bins=3)
-    test_disc  = apply_bins(test_df, bin_edges)
+    if discretise_flag:
+        train_disc, bin_edges = discretise(train_df, feature_cols, n_bins=3)
+        test_disc  = apply_bins(test_df, bin_edges)
     # Drop rows where discretisation produced NaN (rare edge-cases)
     test_disc  = test_disc.dropna(subset=feature_cols)
     test_df    = test_df.loc[test_disc.index].reset_index(drop=True)
     test_disc  = test_disc.reset_index(drop=True)
-
-    # --- Compute per-feature entropies on the training set (your original task) ---
-    print("=" * 60)
-    print("Dataset entropies (training split, discretised features)")
-    print("=" * 60)
-    dataset_entropies = []
-    for col in feature_cols:
-        ent = entropy(train_disc[col])
-        ig  = information_gain(train_disc, col, target="Class")
-        dataset_entropies.append({"Feature": col, "Entropy": ent, "InfoGain": ig})
-        print(f"  {col:<35} entropy={ent:.4f}   IG={ig:.4f}")
-    print()
 
     # --- Build the ID3 tree ---
     print("=" * 60)
