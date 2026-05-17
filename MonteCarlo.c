@@ -1,6 +1,7 @@
 #include <math.h>
 #include <time.h>
 #include "popout.c"
+#include <string.h>
 
 char theory_player;
 
@@ -391,11 +392,11 @@ Move monte_carlo_move(int iterations)
     for(int i=0; i<root->child_count; i++)
 {
     Node *child = root->children[i];
-    printf("col %d %s | visits: %d | wins: %.1f\n",
+    /*printf("col %d %s | visits: %d | wins: %.1f\n",
         child->move.pos,
         child->move.option == 0 ? "insert" : "pop",
         child->visits,
-        child->wins);
+        child->wins);*/
 }
     free_tree(root);
 
@@ -413,3 +414,48 @@ void ai_turn(int iterations)
 
 }
 
+
+void data(int it)
+{
+
+    FILE* fptr;
+    fptr = fopen("bata_dasa.csv","w");
+    Move best;
+    for(int i=0;i<1;i++)
+    {
+        while(!victory)
+        {
+            best = monte_carlo_move(it);
+            if(best.pos==0 && best.option==0)
+            {
+                fprintf(fptr,"draw,");
+                for(int j=0;j<MAX_X;j++)
+                {
+                    fprintf(fptr,"%s", board[j]);
+                }
+                fprintf(fptr,",%c\n", player);
+            }
+            else if(best.option==0)
+            {
+                fprintf(fptr,"%d-i,",best.pos);
+                for(int j=0;j<MAX_X-1;j++)
+                {
+                    fprintf(fptr,"%s", board[j]);
+                }
+                fprintf(fptr,",%c\n", player);
+            }
+            else if(best.option==1)
+            {
+                fprintf(fptr,"%d-p,",best.pos);
+                for(int j=0;j<MAX_X;j++)
+                {
+                    fprintf(fptr,"%s", board[j]);
+                }
+                fprintf(fptr,",%c\n", player);
+            }
+            game_option_selector(best.pos, best.option);
+            player_switch();
+        }
+        victory=true;
+    }
+}
