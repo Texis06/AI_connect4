@@ -62,7 +62,13 @@ int theory_board_pop(int pos);
 void theory_bucket_store(Stack *s);
 void theory_bucket_reset(Stack *s);
 Key84 theory_hash_parser();
-
+bool theory_pop_win_con(int posx, int posy);
+bool theory_insert_win_con(int posx, int posy);
+int theory_horizontal_win_con(int x, int y);
+int theory_vertical_win_con(int x, int y);
+int theory_diagonal_win_con(int x, int y, int dir);
+bool theory_check_insert(int pos);
+bool theory_check_pop(int pos);
 
 //para serem usadas
 void human_option_selector();
@@ -471,7 +477,7 @@ void game_option_selector(int pos, int option)
     }
     else if(option == 0) {insert(pos); }
     else {pop(pos); }
-    player_switch();
+    //player_switch();
 }
 
 

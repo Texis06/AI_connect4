@@ -45,7 +45,7 @@ int main()
             break;
         }
 
-
     }
+    print_board();
     return 0;
 }

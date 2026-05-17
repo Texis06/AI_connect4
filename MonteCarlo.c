@@ -144,7 +144,6 @@ int apply_move(Move m)
         result = theory_board_pop(m.pos);
     }
 
-    player_switch();
 
     return result;
 }
@@ -195,7 +194,7 @@ double uct(Node *parent, Node *child)
                          / child->visits);
       //1.414 é a raiz quadrada de 2 arredondada
       //serve para aumentar a relevância do exploration no cálculo do UCT 
-    return exploitation + 1.414 * exploration;
+    return exploitation + 1.2 * exploration;
 }
 
 // faz o cálculo do UCT para todos os filhos e escolhe o melhor deles
@@ -314,8 +313,7 @@ void theory_player_switch(){
 }
 
 // função para adicionar a todos os nodes anteriores na árvore o resultado do jogo do rollout
-void backpropagate(Node *node,
-                   double result)
+void backpropagate(Node *node, double result)
 {
     Node *current = node;
 
@@ -352,10 +350,7 @@ Move monte_carlo_move(int iterations)
 {
     Move root_move = {0,0};
 
-    Node *root = create_node(NULL,
-                             root_move,
-                             board,
-                             player);
+    Node *root = create_node(NULL, root_move, board, player);
 
     for(int i=0;i<iterations;i++)
     {
@@ -404,9 +399,10 @@ void ai_turn(int iterations)
 {
     Move best = monte_carlo_move(iterations);
 
-    printf("AI chose: column %d | %s", best.pos, best.option == 0 ? "insert" : "pop");
+    printf("AI chose: column %d | %s", best.pos, best.option == 0 ? "insert\n" : "pop\n");
 
-    game_option_selector(best.pos,
-                         best.option);
+    game_option_selector(best.pos, best.option);
+    player_switch();
+
 }
 
