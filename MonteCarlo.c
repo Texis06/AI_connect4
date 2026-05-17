@@ -193,8 +193,8 @@ double uct(Node *parent, Node *child)
     double exploration = sqrt(log(parent->visits)
                          / child->visits);
       //1.414 é a raiz quadrada de 2 arredondada
-      //serve para aumentar a relevância do exploration no cálculo do UCT 
-    return exploitation + 1.2 * exploration;
+      //serve para aumentar a relevância do exploration no cálculo do UCT (AUMENTEI PARA O VALOR 2.5)
+    return exploitation + 2.5 * exploration;
 }
 
 // faz o cálculo do UCT para todos os filhos e escolhe o melhor deles
@@ -208,8 +208,9 @@ Node *select_node(Node *root)
 
         Node *best_child = NULL;
 
-        for(int i=0;i<current->child_count;i++)
-        {
+        for(int i=0;i<current->child_count;i++) {
+           if (current->children[i]->visits == 0) {return current->children[i];}
+        
             Node *child = current->children[i];
 
             double score = uct(current, child);
@@ -233,7 +234,7 @@ Node *expand(Node *node)
 {
     load_theory_board(node->board);
     
-    char theory_player = node->current_player;
+    theory_player = node->current_player;
 
     Move moves[32];
 
@@ -246,9 +247,8 @@ Node *expand(Node *node)
         theory_player = node->current_player;
 
         Move m = moves[i];
-
         apply_move(m);
-
+        theory_player_switch();
         Node *child = create_node(node,
                                   m,
                                   theory_board,
@@ -285,13 +285,9 @@ double rollout(Node *node)
             return 0.5;
         }
         
-        if (theory_pop_win_con(0, 0) || theory_insert_win_con(0, 0)){
-        return 1.0;
-       }
         Move m = moves[rand()%count];
 
         int result = apply_move(m);
-       
         //valor ao ganhar irá ser adicionado ao node ao dar return
         if(result == 1)
         {
@@ -302,9 +298,10 @@ double rollout(Node *node)
         {
             return 0.0;
         }
+      theory_player_switch();
     }
 
-    return 0.5;
+    return 0;
 }
 
 void theory_player_switch(){
@@ -323,9 +320,9 @@ void backpropagate(Node *node, double result)
 
         current->wins += result;
 
-        result = 1.0 - result;
-
         current = current->parent;
+        
+       result = 1.0 - result;
     }
 }
 
@@ -362,9 +359,12 @@ Move monte_carlo_move(int iterations)
         {
             expanded = selected;
         }
+        else if (!selected->fully_expanded){
+            expanded = expand(selected);
+        }
         else
         {
-            expanded = expand(selected);
+            expanded = selected;
         }
 
         double result = rollout(expanded);
@@ -388,7 +388,15 @@ Move monte_carlo_move(int iterations)
     }
 
     Move answer = best->move;
-
+    for(int i=0; i<root->child_count; i++)
+{
+    Node *child = root->children[i];
+    printf("col %d %s | visits: %d | wins: %.1f\n",
+        child->move.pos,
+        child->move.option == 0 ? "insert" : "pop",
+        child->visits,
+        child->wins);
+}
     free_tree(root);
 
     return answer;
@@ -400,7 +408,6 @@ void ai_turn(int iterations)
     Move best = monte_carlo_move(iterations);
 
     printf("AI chose: column %d | %s", best.pos, best.option == 0 ? "insert\n" : "pop\n");
-
     game_option_selector(best.pos, best.option);
     player_switch();
 
