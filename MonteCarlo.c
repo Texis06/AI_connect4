@@ -195,114 +195,153 @@ double uct(Node *parent, Node *child)
                          / child->visits);
       //1.414 é a raiz quadrada de 2 arredondada
       //serve para aumentar a relevância do exploration no cálculo do UCT (AUMENTEI PARA O VALOR 2.5)
-    return exploitation + 2.5 * exploration;
+    return exploitation + 4.0 * exploration;
 }
 
 // faz o cálculo do UCT para todos os filhos e escolhe o melhor deles
-Node *select_node(Node *root)
-{
+Node *select_node(Node *root) {
     Node *current = root;
-
-    while(current->child_count > 0)
-    {
+    while(current->child_count > 0 && current->fully_expanded) {
         double best_score = -1e9;
-
         Node *best_child = NULL;
-
-        for(int i=0;i<current->child_count;i++) {
-           if (current->children[i]->visits == 0) {return current->children[i];}
-        
-            Node *child = current->children[i];
-
-            double score = uct(current, child);
-
-            if(score > best_score)
-            {
+        for(int i=0; i<current->child_count; i++) {
+            double score = uct(current, current->children[i]);
+            if(score > best_score) {
                 best_score = score;
-                best_child = child;
+                best_child = current->children[i];
             }
         }
-
         current = best_child;
     }
-
     return current;
 }
 
 // função para expandir um node (criar os seus filhos, ou seja, criar nodes para todas as jogadas possíveis)
 // esta função também já coloca o node atual na board de "jogo falso"
+
 Node *expand(Node *node)
 {
     load_theory_board(node->board);
-    
     theory_player = node->current_player;
 
     Move moves[32];
-
     int move_count = generate_moves(moves);
 
-    for(int i=0;i<move_count;i++)
+    for(int i = 0; i < move_count; i++)
     {
         load_theory_board(node->board);
-
         theory_player = node->current_player;
 
         Move m = moves[i];
         apply_move(m);
-        theory_player_switch();
-        Node *child = create_node(node,
-                                  m,
-                                  theory_board,
-                                  theory_player);
+        theory_player_switch(); // ← this was missing
 
+        Node *child = create_node(node, m, theory_board, theory_player);
         node->children[node->child_count++] = child;
     }
 
     node->fully_expanded = true;
 
-    if(node->child_count == 0)
-    {
-        return node;
-    }
+    if(node->child_count == 0) return node;
 
-    return node->children[rand()%node->child_count];
+    return node->children[rand() % node->child_count];
 }
 
 // execução do jogo falso do MonteCarlo
 double rollout(Node *node)
 {
     load_theory_board(node->board);
-
     theory_player = node->current_player;
 
-    for(int depth=0; depth<1000; depth++)
+    char turn_board[MAX_X][MAX_Y];
+    char turn_player;
+
+    for(int depth = 0; depth < 1000; depth++)
     {
         Move moves[32];
-
         int count = generate_moves(moves);
-        // 0.5 é usado como um valor-erro (já que não é inteiro)
-        if(count == 0)
-        {
-            return 0.5;
-        }
-        
-        Move m = moves[rand()%count];
+        if(count == 0) return '?';
 
-        int result = apply_move(m);
-        //valor ao ganhar irá ser adicionado ao node ao dar return
-        if(result == 1)
+        turn_player = theory_player;
+        save_theory_board(turn_board);
+
+        Move chosen = moves[rand() % count];
+
+        if(depth == 0) // ← only apply heuristic on first move
         {
-            return 1.0;
+            Move safe_moves[32];
+            int safe_count = 0;
+            Move win_move = {-1, -1};
+            int found = 0;
+
+            for(int i = 0; i < count; i++)
+            {
+                load_theory_board(turn_board);
+                theory_player = turn_player;
+                int result = apply_move(moves[i]);
+                if(result == 1) { win_move = moves[i]; }
+                else if(result != -1) { safe_moves[safe_count++] = moves[i]; }
+            }
+
+            load_theory_board(turn_board);
+            theory_player = turn_player;
+
+            if(win_move.pos != -1)
+            {
+                chosen = win_move;
+                found = 1;
+            }
+            else if(safe_count > 0)
+            {
+                count = safe_count;
+                memcpy(moves, safe_moves, sizeof(Move) * safe_count);
+                chosen = moves[rand() % count];
+            }
+
+            if(found == 0)
+            {
+                theory_player_switch();
+                char opp_player = theory_player;
+                char opp_board[MAX_X][MAX_Y];
+                save_theory_board(opp_board);
+
+                Move opp_moves[32];
+                int opp_count = generate_moves(opp_moves);
+
+                for(int i = 0; i < opp_count; i++)
+                {
+                    load_theory_board(opp_board);
+                    theory_player = opp_player;
+                    int result = apply_move(opp_moves[i]);
+                    if(result == 1)
+                    {
+                        load_theory_board(turn_board);
+                        theory_player = turn_player;
+                        for(int j = 0; j < count; j++)
+                        {
+                            if(moves[j].pos == opp_moves[i].pos &&
+                               moves[j].option == opp_moves[i].option)
+                            {
+                                chosen = moves[j];
+                                found = 2;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                load_theory_board(turn_board);
+                theory_player = turn_player;
+            }
         }
 
-        if(result == -1)
-        {
-            return 0.0;
-        }
-      theory_player_switch();
+        int result = apply_move(chosen);
+        if(result == 1) return theory_player;
+        if(result == -1) return (theory_player == '#' ? '@' : '#');
+        theory_player_switch();
     }
-
-    return 0;
+    return '?';
 }
 
 void theory_player_switch(){
@@ -311,19 +350,17 @@ void theory_player_switch(){
 }
 
 // função para adicionar a todos os nodes anteriores na árvore o resultado do jogo do rollout
-void backpropagate(Node *node, double result)
+void backpropagate(Node *node, char winner)
 {
     Node *current = node;
-
     while(current != NULL)
     {
         current->visits++;
-
-        current->wins += result;
-
+        // credit a win to this node if the winner is the player who just moved
+        // (i.e. NOT the current_player, since current_player is who moves next)
+        if(winner == '?') { current->wins += 0.5; }         // draw
+        else if(winner != current->current_player) { current->wins += 1.0; } // player who moved here won
         current = current->parent;
-        
-       result = 1.0 - result;
     }
 }
 
@@ -368,9 +405,8 @@ Move monte_carlo_move(int iterations)
             expanded = selected;
         }
 
-        double result = rollout(expanded);
-
-        backpropagate(expanded, result);
+        char winner = rollout(expanded);
+        backpropagate(expanded, winner);
     }
 
     Node *best = NULL;
@@ -389,15 +425,7 @@ Move monte_carlo_move(int iterations)
     }
 
     Move answer = best->move;
-    for(int i=0; i<root->child_count; i++)
-{
-    Node *child = root->children[i];
-    /*printf("col %d %s | visits: %d | wins: %.1f\n",
-        child->move.pos,
-        child->move.option == 0 ? "insert" : "pop",
-        child->visits,
-        child->wins);*/
-}
+
     free_tree(root);
 
     return answer;
