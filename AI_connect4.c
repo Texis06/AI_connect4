@@ -6,8 +6,10 @@
 #include "MonteCarlo.c"
 
 
+
 int main()
 {
+    srand(time(NULL));
     initiate_board();
     int flag;
     printf("Choose your gamemode:\n-(1)player vs player;\n-(2)player vs AI;\n-(3)AI vs AI;\n");
@@ -34,16 +36,21 @@ int main()
                 if(!victory)
                 {
                     //player_switch();
-                    ai_turn(5000);
+                    ai_turn(25000);
                 }
             }
             break;
         }
         case 3:
+      {
+        print_ruleset();
+        while(!victory)
         {
-            
-            break;
+            print_board();
+            ai_turn(25000);
         }
+        break;
+      }
 
     }
     print_board();
