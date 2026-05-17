@@ -1,6 +1,3 @@
-
-#include "popout.c"
-
 #include <math.h>
 #include <time.h>
 #include "popout.c"
