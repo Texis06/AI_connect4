@@ -416,10 +416,7 @@ void ai_turn(int iterations)
 {
     Move best = monte_carlo_move(iterations);
 
-    printf("AI chose: column %d | %s
-",
-           best.pos,
-           best.option == 0 ? "insert" : "pop");
+    printf("AI chose: column %d | %s", best.pos, best.option == 0 ? "insert" : "pop");
 
     game_option_selector(best.pos,
                          best.option);
